@@ -2,27 +2,27 @@
 
 > 抓取窗口：2026-10-26 ~ 2026-11-25｜数据来源：grounding 5 条、hackernews 6 条、reddit 0 条
 
-**证据不足提示：** 本期 reddit 完全不可达（0 条），hackernews 仅 6 条且多为单条新闻，grounding 5 条全是“发布追踪器”类页面而非具体发布事件。以下信号只能反映“有哪些话题在冒头”，不能当作完整发布清单。
+**证据不足提示：** 本期 reddit 完全不可达，实际可用条目仅 11 条，且多数为追踪器首页或标题级信息。以下结论只能当作线索，不能当作定论。
 
 ## 一句话结论
-本周没有可核实的单一重大模型发布，信号集中在两件事：AI agent 被外部平台限制（航司、移动操作系统），以及模型安全顾虑被内部员工公开化。
+本周能确认的硬事实只有一条：上海 AI 实验室于 11 月 16 日开源了科学多模态 agent 模型书生 S2.1 Flash（MIT 许可）；其余“发布”信息均来自聚合追踪器，未经一手来源核实。
 
 ## 值得看的信号
 
-**航司开始封堵 AI agent 代订机票**
-United Airlines 禁止 AI agent 代替旅客订票。HN 讨论里有人质疑执行难度，提到用 Claude 浏览器插件或 computer-use agent 照样能操作，并形容自己与商家已形成“对抗关系”。对质量管理岗的意义：外部平台的 agent 准入规则正在变成合规变量。[来源](https://www.cbsnews.com/news/united-airlines-bans-ai-agents-booking-flights/)
+**书生 S2.1 Flash 开源，许可宽松**
+上海 AI 实验室的科学多模态 agent 模型于 2026 年 11 月 16 日发布并开源，采用 MIT License，在 Hugging Face 和 ModelScope 上提供 BF16 与 FP8 两种权重。这是本期唯一带具体日期、许可和分发渠道的条目，对需要本地部署或二次微调的团队有直接参考价值。[来源](https://www.llm-releases.com/)
 
-**Signal 呼吁限制移动 OS 上的 AI agent 抓数据**
-Signal 发文谈保护用户隐私，指向 AI agent 在移动操作系统层面获取过多设备数据。HN 评论引用 Meredith Whittaker 的访谈，称 Signal 正努力阻止这类应用读取 Signal 内容。这是 agent 权限边界问题的又一实例。[来源](https://signal.org/blog/protecting-your-privacy/)
+**11 月发布量被追踪器量化为“37 家厂商、50 个模型”**
+AIFOD 的实时追踪页称 2026 年 11 月有 37 家厂商发布 50 个模型，其中 25 个为开放权重，并点名 GPT-6.2 Astra、Gemini 4 Neon、Kimi K3。这些数字和型号只出现在该追踪器一处，没有厂商公告佐证，引用前需回查原始发布页。[来源](https://af.net/realtime/ai-model-releases-november-2026/)
 
-**审计场景：AI agent 提问质量被拿来和 KPMG 会计师对比**
-一则报道称在审计试验中 AI agent 提出的问题优于 KPMG 会计师。仅此一条来源，试验规模、方法、评审标准均未在证据中给出，结论需保留。[来源](https://europeanbusinessmagazine.com/ai-agents-better-questions-kpmg/)
+**模型发布追踪器本身成了信息基础设施**
+四个 grounding 条目都是追踪器：llm-releases.com、siliconainews 的 tracker（自称 60 条、覆盖 26 家公司）、scriptbyai 的发布日历、aireleasetracker（自称跟踪 343 个模型、11 家公司）。它们口径不一、互不引用，说明当前模型发布信息高度碎片化，质量岗若要做模型选型对比，得自己建一手清单。[来源](https://siliconainews.com/tracker/ai-model-releases)｜[来源](https://aireleasetracker.com/)
 
-**Anthropic 与 OpenAI 员工担忧未发布模型“不安全到不能发”**
-报道称两家公司员工对尚未发布的模型存在安全顾虑。这是内部人视角的说法，证据中无具体模型名、无时间点，只能作为风险氛围信号。[来源](https://tech.yahoo.com/ai/claude/articles/scoop-anthropic-openai-employees-fear-104505580.html)
+**agent 落地开始撞上制度边界**
+美联航禁止 AI agent 代客订票；Signal 发文谈限制移动操作系统上的 AI agent 抓取数据。HN 讨论里有人直接质疑执行可行性（“他们打算怎么阻止我用 Claude in chrome”），也有人提到 Signal 正艰难阻止这类应用读取其数据。对制造业质量岗的启示：agent 接入外部系统时，对方平台的准入政策可能比技术能力更早成为约束。[来源](https://www.cbsnews.com/news/united-airlines-bans-ai-agents-booking-flights/)｜[来源](https://signal.org/blog/protecting-your-privacy/)
 
-**DeepL 发布语音翻译模型 Aure**
-DeepL 称 Aure 是其“最逼真”的语音 AI 翻译模型。证据只有官方新闻稿标题与一句描述，无参数、无评测数据。[来源](https://www.deepl.com/en/press-release/aure-voice-ai-model)
+**审计场景出现 agent 对比实验，但只有标题级信息**
+一条 HN 条目称“AI agents 在审计试验中比 KPMG 会计师提出更好的问题”。证据里只有标题，没有样本量、试验设计或评判标准，无法判断结论强度。若后续有一手报告，这类“提问质量”指标对质量审核、内审流程的 agent 评估有借鉴意义。[来源](https://europeanbusinessmagazine.com/ai-agents-better-questions-kpmg/)
 
 ## 数据面板
 
@@ -30,14 +30,14 @@ DeepL 称 Aure 是其“最逼真”的语音 AI 翻译模型。证据只有官�
 |---|---|---|---|
 | grounding | 5 | — | ok |
 | hackernews | 6 | — | ok |
-| reddit | 0 | — | unreachable（搜索与多个引擎被限流） |
+| reddit | 0 | — | unreachable（no path served；search blocked；brave/ddg/startpage 均被限流） |
 
 ## 阅读提醒
 
-- reddit 整条链路断掉，社区侧只有 HN 一个窗口，且 HN 条目多为单条新闻、无热度数字，不能据此判断话题真实热度。
-- grounding 的 5 条都是发布追踪器首页，不是具体发布事件；本期无法给出“某模型某日发布”这类可核实条目，涉及发布的结论一律保留。
-- 下期重点盯：agent 在消费平台与移动 OS 的准入规则是否有正式条款落地；两家实验室的安全顾虑报道是否出现具名模型或官方回应。
+- **reddit 整条链路是断的**，本期没有任何社区一手讨论，HN 片段也只是零散评论，社区情绪类判断一律不要下。
+- **发布类信息只有一处来源**：11 月的厂商数、模型数、GPT-6.2 Astra / Gemini 4 Neon / Kimi K3 等型号均出自单一追踪器，未经交叉验证，不要写进对外材料。
+- **下期该盯**：书生 S2.1 Flash 的实际评测与采用情况；美联航禁令和 Signal 表态是否引发其他平台跟进；KPMG 审计试验是否有完整报告释出。
 
 ---
 
-由 last30days v4.6.0 引擎抓取证据、deepseek-chat 合成；生成时间 2026-11-25 09:04。
+由 last30days v4.6.0 引擎抓取证据、deepseek-chat 合成；生成时间 2026-11-25 09:12。
