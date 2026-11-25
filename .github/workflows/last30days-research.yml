@@ -1,0 +1,64 @@
+# 手动触发：在 GitHub Actions 里跑 last30days，输入一个话题即可生成研究报告
+name: last30days research
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: '要研究的话题'
+        required: true
+        default: 'AI coding agent tools'
+      quick:
+        description: 'true = quick 模式（快但样本少），false = 完整模式'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env:
+      LAST30DAYS_PYTHON: python3
+      # 可选：在 Settings → Secrets and variables → Actions 里配置后自动生效
+      BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+      SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+      X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+      SCRAPECREATORS_API_KEY: ${{ secrets.SCRAPECREATORS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install optional YouTube tool
+        run: pip install --quiet yt-dlp || true
+
+      - name: Run last30days
+        env:
+          TOPIC: ${{ inputs.topic }}
+          QUICK: ${{ inputs.quick }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          ARGS=()
+          if [ "$QUICK" = "true" ]; then ARGS+=(--quick); fi
+          python3 skills/last30days/scripts/last30days.py "$TOPIC" "${ARGS[@]}" --emit md --output "reports/${TOPIC//\//_}.md" || true
+          ls -la reports
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: last30days-report
+          path: reports/
+          if-no-files-found: warn
+
+      - name: Commit report back to repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports || true
+          git diff --cached --quiet || git commit -m "report: ${{ inputs.topic }}"
+          git push || true
