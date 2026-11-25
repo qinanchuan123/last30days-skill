@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       topics:
-        description: '要跑的选题：all / ai / finance / tech'
+        description: '要跑的选题：all / ai / finance / tech / world'
         required: true
         default: 'all'
       quick:
@@ -65,13 +65,15 @@ jobs:
             [ai]="AI agent tools and model releases"
             [finance]="stock market and macro outlook"
             [tech]="big tech product and industry news"
+            [world]="geopolitics: wars, elections, sanctions, tariffs, central bank policy"
           )
           declare -A LABELS=(
             [ai]="AI 周报"
             [finance]="金融周报"
             [tech]="科技周报"
+            [world]="世界变局"
           )
-          for KEY in ai finance tech; do
+          for KEY in ai finance tech world; do
             if [ "$TOPIC_SET" != "all" ] && [ "$TOPIC_SET" != "$KEY" ]; then
               continue
             fi
