@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       topics:
-        description: '要跑的选题：all / ai / finance / tech / world'
+        description: '要跑的选题：all / ai / chips / science / space / world'
         required: true
         default: 'all'
       quick:
@@ -59,18 +59,27 @@ jobs:
           WORK="${RUNNER_TEMP}/l30d"
           mkdir -p "$OUT" "$WORK"
           declare -A TOPICS=(
-            [ai]="AI agent tools and model releases"
-            [finance]="stock market and macro outlook"
-            [tech]="big tech product and industry news"
-            [world]="geopolitics: wars, elections, sanctions, tariffs, central bank policy"
+            [ai]="frontier AI research: new model architectures, reasoning, agents, benchmarks, open weights"
+            [chips]="semiconductors and compute: advanced nodes, HBM, advanced packaging, GPU and ASIC roadmaps, EDA, export controls"
+            [science]="frontier science: quantum computing, fusion energy, superconductors, synthetic biology, brain-computer interfaces"
+            [space]="space and deep sea: reusable rockets, satellite internet, lunar and Mars missions, deep-sea exploration"
+            [world]="tech geopolitics and governance: export control lists, AI regulation, data sovereignty, compute nationalism"
           )
           declare -A LABELS=(
-            [ai]="AI 日报"
-            [finance]="金融日报"
-            [tech]="科技日报"
-            [world]="世界变局"
+            [ai]="AI 前沿"
+            [chips]="芯片与算力"
+            [science]="前沿科学"
+            [space]="太空与深海"
+            [world]="技术地缘"
           )
-          for KEY in ai finance tech world; do
+          declare -A WINDOW=(
+            [ai]=2
+            [chips]=2
+            [science]=7
+            [space]=7
+            [world]=2
+          )
+          for KEY in ai chips science space world; do
             if [ "$TOPIC_SET" != "all" ] && [ "$TOPIC_SET" != "$KEY" ]; then
               continue
             fi
@@ -84,7 +93,7 @@ jobs:
             cp "$HOME/.config/last30days/last-report.json" "$WORK/${KEY}.json" \
               || echo "::warning::${KEY} last-report.json missing"
             python3 tools/rss_headlines.py --topic "$KEY" --out "$WORK/rss-${KEY}.md" \
-              --days 2 --per-feed 8 --total 32 \
+              --days "${WINDOW[$KEY]}" --per-feed 8 --total 32 \
               || echo "::warning::${KEY} rss failed"
             python3 tools/weekly_brief.py \
               --report "$WORK/${KEY}.json" \
