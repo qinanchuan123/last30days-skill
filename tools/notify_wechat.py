@@ -61,7 +61,7 @@ def main():
     sc_key = os.environ.get("SERVERCHAN_SENDKEY")
     pp_token = os.environ.get("PUSHPLUS_TOKEN")
     if not sc_key and not pp_token:
-        print("SERVERCHAN_SENDKEY / PUSHPLUS_TOKEN 均未配置，跳过微信推送"
+        print("SERVERCHAN_SENDKEY / PUSHPLUS_TOKEN 均未配置，跳过微信推送")
         return 0
 
     provider = "serverchan" if sc_key else "pushplus"
