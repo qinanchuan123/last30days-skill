@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       topics:
-        description: '要跑的选题：all / ai / chips / science / space / world'
+        description: '要跑的选题：all / ai / chips / finance / science / space / world'
         required: true
         default: 'all'
       quick:
@@ -63,6 +63,7 @@ jobs:
           declare -A TOPICS=(
             [ai]="frontier AI research: new model architectures, reasoning, agents, benchmarks, open weights"
             [chips]="semiconductors and compute: advanced nodes, HBM, advanced packaging, GPU and ASIC roadmaps, EDA, export controls"
+            [finance]="global markets and macro: rates, currencies, commodities, central bank policy, capital flows"
             [science]="frontier science: quantum computing, fusion energy, superconductors, synthetic biology, brain-computer interfaces"
             [space]="space and deep sea: reusable rockets, satellite internet, lunar and Mars missions, deep-sea exploration"
             [world]="tech geopolitics and governance: export control lists, AI regulation, data sovereignty, compute nationalism"
@@ -70,6 +71,7 @@ jobs:
           declare -A LABELS=(
             [ai]="AI 前沿"
             [chips]="芯片与算力"
+            [finance]="金融与宏观"
             [science]="前沿科学"
             [space]="太空与深海"
             [world]="技术地缘"
@@ -77,11 +79,12 @@ jobs:
           declare -A WINDOW=(
             [ai]=2
             [chips]=2
+            [finance]=2
             [science]=7
             [space]=7
             [world]=2
           )
-          for KEY in ai chips science space world; do
+          for KEY in ai chips finance science space world; do
             if [ "$TOPIC_SET" != "all" ] && [ "$TOPIC_SET" != "$KEY" ]; then
               continue
             fi
