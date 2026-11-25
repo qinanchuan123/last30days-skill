@@ -31,7 +31,8 @@ jobs:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       DEEPSEEK_BASE_URL: https://api.deepseek.com
       DEEPSEEK_MODEL: deepseek-chat
-      # 微信推送（PushPlus）
+      # 微信推送：优先 Server酱（免费），PushPlus 作兜底
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
       PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
       # 可选数据源；不配也能跑
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
@@ -95,7 +96,7 @@ jobs:
         if: always()
         run: |
           DATE="$(date -u +%F)"
-          python3 tools/pushplus_notify.py --dir "reports/${DATE}" --date "$DATE" || true
+          python3 tools/notify_wechat.py --dir "reports/${DATE}" --date "$DATE" --label "情报简报" || true
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
