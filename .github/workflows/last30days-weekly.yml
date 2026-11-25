@@ -58,6 +58,8 @@ jobs:
           OUT="reports/${DATE}"
           WORK="${RUNNER_TEMP}/l30d"
           mkdir -p "$OUT" "$WORK"
+          # 清掉当天旧产物，避免旧话题残留被一起推送
+          rm -f "$OUT"/*.md
           declare -A TOPICS=(
             [ai]="frontier AI research: new model architectures, reasoning, agents, benchmarks, open weights"
             [chips]="semiconductors and compute: advanced nodes, HBM, advanced packaging, GPU and ASIC roadmaps, EDA, export controls"
