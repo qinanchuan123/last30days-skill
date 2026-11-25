@@ -27,12 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LAST30DAYS_PYTHON: python3
+      # 合成用的模型（DeepSeek，OpenAI 兼容）
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      DEEPSEEK_BASE_URL: https://api.deepseek.com
+      DEEPSEEK_MODEL: deepseek-chat
+      # 微信推送（PushPlus）
+      PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+      # 可选数据源；不配也能跑
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
       SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
       X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
       SCRAPECREATORS_API_KEY: ${{ secrets.SCRAPECREATORS_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +48,7 @@ jobs:
       - name: Install optional YouTube tool
         run: pip install --quiet yt-dlp || true
 
-      - name: Generate weekly briefs
+      - name: Collect evidence and synthesize
         env:
           TOPIC_SET: ${{ inputs.topics }}
           QUICK: ${{ inputs.quick }}
@@ -53,11 +58,17 @@ jobs:
           QUICK="${QUICK:-false}"
           DATE="$(date -u +%F)"
           OUT="reports/${DATE}"
-          mkdir -p "$OUT"
+          WORK="${RUNNER_TEMP}/l30d"
+          mkdir -p "$OUT" "$WORK"
           declare -A TOPICS=(
             [ai]="AI agent tools and model releases"
             [finance]="stock market and macro outlook"
             [tech]="big tech product and industry news"
+          )
+          declare -A LABELS=(
+            [ai]="AI 周报"
+            [finance]="金融周报"
+            [tech]="科技周报"
           )
           for KEY in ai finance tech; do
             if [ "$TOPIC_SET" != "all" ] && [ "$TOPIC_SET" != "$KEY" ]; then
@@ -68,10 +79,23 @@ jobs:
             ARGS=()
             if [ "$QUICK" = "true" ]; then ARGS+=(--quick); fi
             python3 skills/last30days/scripts/last30days.py "$TOPIC" "${ARGS[@]}" \
-              --emit md --output "$OUT/${KEY}.md" \
-              || echo "::warning::${KEY} run returned non-zero"
+              --max-results 12 --emit md --output "$WORK/raw-${KEY}.md" \
+              || echo "::warning::${KEY} engine returned non-zero"
+            cp "$HOME/.config/last30days/last-report.json" "$WORK/${KEY}.json" \
+              || echo "::warning::${KEY} last-report.json missing"
+            python3 tools/weekly_brief.py \
+              --report "$WORK/${KEY}.json" \
+              --out "$OUT/${KEY}.md" \
+              --title "${LABELS[$KEY]}" \
+              || echo "::warning::${KEY} synthesis failed"
           done
           ls -la "$OUT" || true
+
+      - name: Push briefs to WeChat
+        if: always()
+        run: |
+          DATE="$(date -u +%F)"
+          python3 tools/pushplus_notify.py --dir "reports/${DATE}" --date "$DATE" || true
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
