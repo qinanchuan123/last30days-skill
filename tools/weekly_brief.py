@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn a last30days engine run (last-report.json) into a Chinese weekly brief.
+"""Turn a last30days engine run (last-report.json) into a Chinese brief.
 
 The engine only ranks and clusters evidence; the synthesis (what it means, what
 to watch) is the host model's job. This script does that job with an
@@ -11,44 +11,52 @@ import datetime as dt
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 
-SYSTEM = """你是一名资深科技编辑，为一位制造业质量管理岗的读者写每周情报简报。
+SYSTEM = """你是一名资深科技编辑，为一位制造业质量管理岗的读者写情报简报。
 硬性要求：
 1. 只使用用户给出的证据条目。禁止补充证据之外的数字、日期、人名、结论。
 2. 每条信号必须给出来源链接，用 Markdown 链接放在句末或段末。
 3. 证据若明显不足（例如只有一个来源），必须在开头指出，不能假装信息充分。
 4. 中文写作，短句，不用“赋能/闭环/抓手”这类空话；不要写“总的来说”。
 5. 输出纯 Markdown，不要代码块包裹。
+6. 外部新闻源（RSS）属于事件级证据，带日期的条目优先用于陈述“发生了什么”；
+   没有日期的条目只能说“有报道称”，不能编日期。
+7. 本期是每日推送，重点写最近 24–48 小时的新变化；30 天窗口的旧条目只作背景，
+   不要重复讲已经推过的老话题。
 """
 
 USER_TEMPLATE = """主题：{topic}
 抓取窗口：{rfrom} ~ {rto}
+本期重点：{focus}
 来源状态：{status}
 
 证据条目（标题 / 来源 / 链接 / 社区片段）：
 {evidence}
+{extra_block}
 
 请按下面结构输出：
 # {title}
 
 > 抓取窗口：{rfrom} ~ {rto}｜数据来源：{sources_summary}
 
-## 一句话结论
-（一句话，说清本周最重要的变化）
+## 今天最值得知道的一件事
+（一句话，说清这段时间最重要的变化；没有的话就直说“本期无重要变化”）
 
 ## 值得看的信号
-（3-5 条，每条：**加粗小标题**，2-3 句事实 + 1 句社区反应或意义，末尾带来源链接）
+（3-5 条，每条：**加粗小标题**，2-3 句事实 + 1 句社区反应或意义，末尾带来源链接；
+  优先选带日期的近期事件）
 
 ## 数据面板
-（一张表：来源 / 条目数 / 互动 / 状态；只填证据里有的数字，没有就写“—”）
+（一张表：来源 / 条目数 / 互动 / 状态；只填证据里有的数字，没有就写“—”）。
 
 ## 阅读提醒
-（2-3 条：哪些来源是断的、哪些结论需要保留、下期该盯什么）
+（2-3 条：哪些来源是断的、哪些结论需要保留、接下来该盯什么）
 """
 
 
-def chat(base_url, api_key, model, messages, max_tokens=2200, temperature=0.3):
+def chat(base_url, api_key, model, messages, max_tokens=2400, temperature=0.3):
     payload = {
         "model": model,
         "messages": messages,
@@ -80,6 +88,20 @@ def build_evidence(report, limit=12, snippet_chars=260):
     return "\n".join(rows) if rows else "（引擎未返回任何候选条目）"
 
 
+def build_extra(path, max_chars=7000):
+    """外部 RSS 标题清单，作为事件级证据插入 prompt。"""
+    if not path or not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        rows = fh.read().strip()
+    if not rows:
+        return ""
+    count = sum(1 for line in rows.splitlines() if line.startswith("- "))
+    if len(rows) > max_chars:
+        rows = rows[:max_chars] + "\n（已截断）"
+    return f"\n外部新闻源（RSS 标题，共 {count} 条，按时间倒序）：\n{rows}\n"
+
+
 def summarize_sources(report):
     parts = []
     stats = report.get("items_by_source") or {}
@@ -94,6 +116,8 @@ def main():
     ap.add_argument("--report", required=True, help="engine 的 last-report.json 路径")
     ap.add_argument("--out", required=True, help="输出 md 路径")
     ap.add_argument("--title", default=None)
+    ap.add_argument("--extra", default=None, help="RSS 事件级证据文件（可选）")
+    ap.add_argument("--focus", default="最近 24–48 小时的新变化")
     ap.add_argument("--base-url", default=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
     ap.add_argument("--model", default=os.environ.get("DEEPSEEK_MODEL", "deepseek-chat"))
     ap.add_argument("--max-candidates", type=int, default=12)
@@ -117,8 +141,10 @@ def main():
         title=args.title or topic,
         rfrom=rfrom,
         rto=rto,
+        focus=args.focus,
         status=status,
         evidence=build_evidence(report, args.max_candidates),
+        extra_block=build_extra(args.extra),
         sources_summary=summarize_sources(report),
     )
 
@@ -134,7 +160,7 @@ def main():
 
     footer = (
         "\n\n---\n\n"
-        f"由 last30days v4.6.0 引擎抓取证据、{args.model} 合成；"
+        f"由 last30days v4.6.0 引擎 + RSS 新闻源抓证据、{args.model} 合成；"
         f"生成时间 {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}。\n"
     )
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
