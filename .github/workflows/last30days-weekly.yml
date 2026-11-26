@@ -34,6 +34,160 @@ jobs:
       PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
       SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+name: last30days daily brief
+
+on:
+  schedule:
+    # 每天 00:00 UTC（北京时间早上 08:00）
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      topics:
+        description: '要跑的选题：all / ai / chips / finance / science / space / world'
+        required: true
+        default: 'all'
+      quick:
+        description: 'true=快速模式（样本少），false=完整模式'
+        required: false
+        default: 'false'
+      mode:
+        description: 'both=原始+解读；insight=只生成并发送解读版（用于补发）'
+        required: true
+        default: 'both'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: last30days-daily
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    env:
+      LAST30DAYS_PYTHON: python3
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      DEEPSEEK_BASE_URL: https://api.deepseek.com
+      DEEPSEEK_MODEL: deepseek-chat
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+      PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+      BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+      SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+      X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+      SCRAPECREATORS_API_KEY: ${{ secrets.SCRAPECREATORS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install optional YouTube tool
+        run: pip install --quiet yt-dlp || true
+
+      - name: Collect evidence and synthesize
+        env:
+          TOPIC_SET: ${{ inputs.topics }}
+          QUICK: ${{ inputs.quick }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -uo pipefail
+          TOPIC_SET="${TOPIC_SET:-all}"
+          QUICK="${QUICK:-false}"
+          MODE="${MODE:-both}"
+          DATE="$(date -u +%F)"
+          OUT="reports/${DATE}"
+          WORK="${RUNNER_TEMP}/l30d"
+          mkdir -p "$OUT" "$WORK"
+          if [ "$MODE" != "insight" ]; then
+            # 清掉当天旧产物，避免旧话题残留被一起推送
+            rm -f "$OUT"/*.md
+            declare -A TOPICS=(
+            [ai]="frontier AI research: new model architectures, reasoning, agents, benchmarks, open weights"
+            [chips]="semiconductors and compute: advanced nodes, HBM, advanced packaging, GPU and ASIC roadmaps, EDA, export controls"
+            [finance]="global markets and macro: rates, currencies, commodities, central bank policy, capital flows"
+            [science]="frontier science: quantum computing, fusion energy, superconductors, synthetic biology, brain-computer interfaces"
+            [space]="space and deep sea: reusable rockets, satellite internet, lunar and Mars missions, deep-sea exploration"
+            [world]="tech geopolitics and governance: export control lists, AI regulation, data sovereignty, compute nationalism"
+          )
+          declare -A LABELS=(
+            [ai]="AI 前沿"
+            [chips]="芯片与算力"
+            [finance]="金融与宏观"
+            [science]="前沿科学"
+            [space]="太空与深海"
+            [world]="技术地缘"
+          )
+          declare -A WINDOW=(
+            [ai]=2
+            [chips]=2
+            [finance]=2
+            [science]=7
+            [space]=7
+            [world]=2
+          )
+          for KEY in ai chips finance science space world; do
+            if [ "$TOPIC_SET" != "all" ] && [ "$TOPIC_SET" != "$KEY" ]; then
+              continue
+            fi
+            TOPIC="${TOPICS[$KEY]}"
+            echo "== ${KEY}: ${TOPIC}"
+            ARGS=()
+            if [ "$QUICK" = "true" ]; then ARGS+=(--quick); fi
+            python3 skills/last30days/scripts/last30days.py "$TOPIC" "${ARGS[@]}" \
+              --max-results 12 --emit md --output "$WORK/raw-${KEY}.md" \
+              || echo "::warning::${KEY} engine returned non-zero"
+            cp "$HOME/.config/last30days/last-report.json" "$WORK/${KEY}.json" \
+              || echo "::warning::${KEY} last-report.json missing"
+            python3 tools/rss_headlines.py --topic "$KEY" --out "$WORK/rss-${KEY}.md" \
+              --days "${WINDOW[$KEY]}" --per-feed 8 --total 32 \
+              || echo "::warning::${KEY} rss failed"
+            python3 tools/weekly_brief.py \
+              --report "$WORK/${KEY}.json" \
+              --extra "$WORK/rss-${KEY}.md" \
+              --out "$OUT/${KEY}.md" \
+              --title "${LABELS[$KEY]}" \
+              --focus "最近 24-48 小时的新变化" \
+              || echo "::warning::${KEY} synthesis failed"
+          done
+          fi
+          python3 tools/daily_insight.py \
+            --dir "$OUT" \
+            --out "$OUT/insight/insight.md" \
+            --date "$DATE" \
+            || echo "::warning::insight generation failed"
+          ls -la "$OUT" || true
+
+      - name: Push briefs to WeChat
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          DATE="$(date -u +%F)"
+          MODE="${MODE:-both}"
+          if [ "$MODE" != "insight" ]; then
+            python3 tools/notify_wechat.py --dir "reports/${DATE}" --date "$DATE" --label "每日情报" || true
+          fi
+          if [ -f "reports/${DATE}/insight/insight.md" ]; then
+            python3 tools/notify_wechat.py --dir "reports/${DATE}/insight" --date "$DATE" --label "每日情报·解读" || true
+          fi
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: last30days-brief-${{ github.run_number }}
+          path: reports/
+          if-no-files-found: warn
+
+      - name: Commit reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          find reports -mindepth 1 -maxdepth 1 -type d -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+          git add -A reports
+          git diff --cached --quiet || git commit -m "report: daily brief $(date -u +%F)"
+          git push || true
       X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
       SCRAPECREATORS_API_KEY: ${{ secrets.SCRAPECREATORS_API_KEY }}
     steps:
